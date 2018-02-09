@@ -458,6 +458,11 @@ class Client
         ];
     }
 
+    public function setClientId($clientId){
+
+	$this->_clientId=$clientId;
+    }
+
     /**
      * Renews the access token from OAuth. This token is valid for one hour.
      *
