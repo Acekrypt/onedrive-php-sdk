@@ -852,6 +852,15 @@ class Client
 
         return new File($this, $driveItemId, $result);
     }
+    
+   public function fetchFileContent($driveItemId)
+    {
+        if (!$driveItemId){
+		return "";
+	}
+        $result      = $this->apiGet($driveItemId."/content");
+	return $result;
+    }
 
     /**
      * Fetches the root folder from the current OneDrive account.
