@@ -458,6 +458,11 @@ class Client
         ];
     }
 
+    public function setClientId($clientId){
+
+	$this->_clientId=$clientId;
+    }
+
     /**
      * Renews the access token from OAuth. This token is valid for one hour.
      *
@@ -846,6 +851,15 @@ class Client
         }
 
         return new File($this, $driveItemId, $result);
+    }
+    
+   public function fetchFileContent($driveItemId)
+    {
+        if (!$driveItemId){
+		return "";
+	}
+        $result      = $this->apiGet($driveItemId."/content");
+	return $result;
     }
 
     /**

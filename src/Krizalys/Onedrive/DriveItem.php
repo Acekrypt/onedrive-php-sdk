@@ -149,7 +149,7 @@ abstract class DriveItem
         $this->_size = (int) $result->size;
 
         /** @todo Handle volatile existence (eg. present only for files). */
-        $this->_source = (string) $result->source;
+        //$this->_source = (string) $result->source;
 
         $this->_createdTime = strtotime($result->created_time);
         $this->_updatedTime = strtotime($result->updated_time);
