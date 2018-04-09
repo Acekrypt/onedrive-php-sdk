@@ -333,6 +333,7 @@ class Client
         // the variable is "code"). This is suitable for PHP.
         $url = self::AUTH_URL
             . '?client_id=' . urlencode($this->_clientId)
+            . '&state=' . urlencode($this->_state)
             . '&scope=' . urlencode($imploded)
             . '&response_type=code'
             . '&redirect_uri=' . urlencode($redirectUri)
