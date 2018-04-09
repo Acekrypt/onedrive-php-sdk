@@ -47,6 +47,11 @@ class Client
     /**
      * @var object OAuth state (token, etc...).
      */
+    private $_authstate;
+    
+    /**
+     * @var csrf token.
+     */
     private $_state;
 
     /**
@@ -215,9 +220,12 @@ class Client
     {
         $this->_clientId = array_key_exists('client_id', $options)
             ? (string) $options['client_id'] : null;
+        
+ 	$this->_state = array_key_exists('state', $options)
+            ? (string) $options['state'] : null;
 
-        $this->_state = array_key_exists('state', $options)
-            ? $options['state'] : (object) [
+        $this->_authstate = array_key_exists('authstate', $options)
+            ? $options['authstate'] : (object) [
                 'redirect_uri' => null,
                 'token'        => null,
             ];
@@ -279,7 +287,7 @@ class Client
      */
     public function getState()
     {
-        return $this->_state;
+        return $this->_authstate;
     }
 
     /**
@@ -318,13 +326,14 @@ class Client
 
         $imploded                   = implode(',', $scopes);
         $redirectUri                = (string) $redirectUri;
-        $this->_state->redirect_uri = $redirectUri;
+        $this->_authstate->redirect_uri = $redirectUri;
 
         // When using this URL, the browser will eventually be redirected to the
         // callback URL with a code passed in the URL query string (the name of
         // the variable is "code"). This is suitable for PHP.
         $url = self::AUTH_URL
             . '?client_id=' . urlencode($this->_clientId)
+            . '&state=' . urlencode($this->_state)
             . '&scope=' . urlencode($imploded)
             . '&response_type=code'
             . '&redirect_uri=' . urlencode($redirectUri)
@@ -341,8 +350,8 @@ class Client
      */
     public function getTokenExpire()
     {
-        return $this->_state->token->obtained
-            + $this->_state->token->data->expires_in - time();
+        return $this->_authstate->token->obtained
+            + $this->_authstate->token->data->expires_in - time();
     }
 
     /**
@@ -356,7 +365,7 @@ class Client
      */
     public function getAccessTokenStatus()
     {
-        if (null === $this->_state->token) {
+        if (null === $this->_authstate->token) {
             return 0;
         }
 
@@ -394,7 +403,7 @@ class Client
             );
         }
 
-        if (null === $this->_state->redirect_uri) {
+        if (null === $this->_authstate->redirect_uri) {
             throw new \Exception(
                 'The state\'s redirect URI must be set to call'
                     . ' obtainAccessToken()'
@@ -408,7 +417,7 @@ class Client
         $fields = http_build_query(
             [
                 'client_id'     => $this->_clientId,
-                'redirect_uri'  => $this->_state->redirect_uri,
+                'redirect_uri'  => $this->_authstate->redirect_uri,
                 'client_secret' => $clientSecret,
                 'code'          => $code,
                 'grant_type'    => 'authorization_code',
@@ -450,12 +459,17 @@ class Client
             throw new \Exception('json_decode() failed');
         }
 
-        $this->_state->redirect_uri = null;
+        $this->_authstate->redirect_uri = null;
 
-        $this->_state->token = (object) [
+        $this->_authstate->token = (object) [
             'obtained' => time(),
             'data'     => $decoded,
         ];
+    }
+
+    public function setClientId($clientId){
+
+	$this->_clientId=$clientId;
     }
 
     /**
@@ -471,7 +485,7 @@ class Client
             );
         }
 
-        if (null === $this->_state->token->data->refresh_token) {
+        if (null === $this->_authstate->token->data->refresh_token) {
             throw new \Exception(
                 'The refresh token is not set or no permission for'
                     . ' \'wl.offline_access\' was given to renew the token'
@@ -494,7 +508,7 @@ class Client
                     . '&client_secret=' . urlencode($clientSecret)
                     . '&grant_type=refresh_token'
                     . '&refresh_token=' . urlencode(
-                        $this->_state->token->data->refresh_token
+                        $this->_authstate->token->data->refresh_token
                     ),
 
             // SSL options.
@@ -521,7 +535,7 @@ class Client
             throw new \Exception('json_decode() failed');
         }
 
-        $this->_state->token = (object) [
+        $this->_authstate->token = (object) [
             'obtained' => time(),
             'data'     => $decoded,
         ];
@@ -541,7 +555,7 @@ class Client
             self::API_URL
                 . $path
                 . '?access_token=' . urlencode(
-                    $this->_state->token->data->access_token
+                    $this->_authstate->token->data->access_token
                 );
 
         $curl = self::_createCurl($path, $options);
@@ -572,7 +586,7 @@ class Client
                 'Content-Type: application/json',
 
                 'Authorization: Bearer '
-                    . $this->_state->token->data->access_token,
+                    . $this->_authstate->token->data->access_token,
             ],
 
             CURLOPT_POSTFIELDS => json_encode($data),
@@ -598,7 +612,7 @@ class Client
         $stats = fstat($stream);
 
         $headers = [
-            'Authorization: Bearer ' . $this->_state->token->data->access_token,
+            'Authorization: Bearer ' . $this->_authstate->token->data->access_token,
         ];
 
         if (null !== $contentType) {
@@ -630,7 +644,7 @@ class Client
             self::API_URL
                 . $path
                 . '?access_token='
-                . urlencode($this->_state->token->data->access_token);
+                . urlencode($this->_authstate->token->data->access_token);
 
         $curl = self::_createCurl($path);
 
@@ -665,7 +679,7 @@ class Client
                 'Content-Type: application/json',
 
                 'Authorization: Bearer '
-                    . $this->_state->token->data->access_token,
+                    . $this->_authstate->token->data->access_token,
             ],
 
             CURLOPT_POSTFIELDS    => json_encode($data),
@@ -697,7 +711,7 @@ class Client
                 'Content-Type: application/json',
 
                 'Authorization: Bearer '
-                    . $this->_state->token->data->access_token,
+                    . $this->_authstate->token->data->access_token,
             ],
 
             CURLOPT_POSTFIELDS    => json_encode($data),
@@ -846,6 +860,15 @@ class Client
         }
 
         return new File($this, $driveItemId, $result);
+    }
+    
+   public function fetchFileContent($driveItemId)
+    {
+        if (!$driveItemId){
+		return "";
+	}
+        $result      = $this->apiGet($driveItemId."/content");
+	return $result;
     }
 
     /**
